@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "lark-wrapper"
+version = "0.1.0"
+description = "飞书 (Lark/Feishu) Open API Python 封装库"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "lark-oapi>=1.5.0",
+    "pydantic>=2.0.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-mock"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lark_wrapper*"]
