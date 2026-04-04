@@ -1,4 +1,4 @@
-# lark_wrapper
+# lark-wrapper
 
 飞书 (Lark/Feishu) Open API 的 Python 封装库，基于官方 `lark-oapi` SDK，提供更简洁的调用接口和结构化返回值。
 
@@ -6,11 +6,11 @@
 
 ```bash
 # 作为 git submodule 安装（推荐）
-git submodule add https://github.com/dreasky/lark_wrapper.git libs/lark_wrapper
-pip install -e libs/lark_wrapper
+git submodule add https://github.com/dreasky/lark-wrapper.git libs/lark-wrapper
+pip install -e libs/lark-wrapper
 
 # 直接从 GitHub 安装
-pip install git+https://github.com/dreasky/lark_wrapper.git
+pip install git+https://github.com/dreasky/lark-wrapper.git
 ```
 
 ## 配置
