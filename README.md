@@ -6,18 +6,18 @@
 
 ```bash
 # 作为 git submodule 安装（推荐）
-git submodule add https://github.com/<your-username>/lark-wrapper.git libs/lark-wrapper
+git submodule add https://github.com/dreasky/lark-wrapper.git libs/lark-wrapper
 pip install -e libs/lark-wrapper
 
 # 直接从 GitHub 安装
-pip install git+https://github.com/<your-username>/lark-wrapper.git
+pip install git+https://github.com/dreasky/lark-wrapper.git
 ```
 
 ## 配置
 
 在项目根目录创建 `.env` 文件（参考 `.env.example`）：
 
-```
+```text
 FEISHU_APP_ID=cli_xxxxxxxxxxxxxxxx
 FEISHU_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 FEISHU_BASE_URL=https://open.feishu.cn/open-apis
