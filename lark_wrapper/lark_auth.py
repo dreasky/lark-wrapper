@@ -37,13 +37,9 @@ class LarkAuth:
                 """
             )
 
-        self._client = (
-            lark.Client.builder()
-            .app_id(self._app_id)
-            .app_secret(self._app_secret)
-            .log_level(lark.LogLevel.INFO)
-            .build()
-        )
+        self._client = None
+        self._ws_client = None
+        self._ws_client_handler = None
 
         self._token_cache_file = Path.home() / ".cache" / "lark_wrapper" / ".tenant_access_token.json"
 
@@ -56,7 +52,26 @@ class LarkAuth:
         cls._initialized = False
 
     def get_client(self) -> lark.Client:
+        if self._client is None:
+            self._client = (
+                lark.Client.builder()
+                .app_id(self._app_id)
+                .app_secret(self._app_secret)
+                .log_level(lark.LogLevel.INFO)
+                .build()
+            )
         return self._client
+
+    def get_ws_client(self, event_handler: lark.EventDispatcherHandler) -> lark.ws.Client:
+        if self._ws_client is None or self._ws_client_handler is not event_handler:
+            self._ws_client = lark.ws.Client(
+                self._app_id,
+                self._app_secret,
+                event_handler=event_handler,
+                log_level=lark.LogLevel.INFO,
+            )
+            self._ws_client_handler = event_handler
+        return self._ws_client
 
     def get_tenant_access_token(self) -> str | None:
         """获取 Tenant Access Token，带缓存机制，自动处理过期"""
