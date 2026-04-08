@@ -1,15 +1,19 @@
+import sys
 import json
 from pathlib import Path
 from lark_oapi.api.im.v1 import (
     CreateMessageRequestBody,
+    CreateMessageResponseBody,
     CreateMessageRequest,
     CreateMessageResponse,
     ListMessageRequest,
     ListMessageResponse,
+    ListMessageResponseBody,
     GetMessageResourceRequest,
     GetMessageResourceResponse,
     GetMessageRequest,
     GetMessageResponse,
+    GetMessageResponseBody,
 )
 from .wrapper_entity import *
 from .base_wrapper import BaseWrapper
@@ -27,11 +31,13 @@ class MessageManageWrapper(BaseWrapper):
         receive_id_type: str,
         message: str,
         msg_type: str,
-    ) -> SendMessageResult:
+    ) -> CreateMessageResponseBody:
         """
         发送消息
         https://open.feishu.cn/document/server-docs/im-v1/message/create
         """
+        fn = sys._getframe(0).f_code.co_name
+
         content = json.dumps({msg_type: message}, ensure_ascii=False, indent=2)
 
         # 构造消息请求体
@@ -54,28 +60,15 @@ class MessageManageWrapper(BaseWrapper):
         # 发起请求
         response: CreateMessageResponse = self._client.im.v1.message.create(request)
 
-        # 处理失败返回
+        # 处理响应失败
         if not response.success():
-            resp_data = (
-                json.loads(response.raw.content)
-                if response.raw and response.raw.content
-                else {}
-            )
-            raise WrapperError(
-                method="send_message",
-                code=response.code,
-                msg=response.msg,
-                log_id=response.get_log_id(),
-                resp=resp_data,
-            )
+            raise WrapperError(method=fn, response=response)
+        if response.data is None:
+            raise WrapperError(method=fn, detail="response.data is null")
 
-        result = SendMessageResult(
-            receive_id_type=receive_id_type,
-            receive_id=receive_id,
-            msg_type=msg_type,
-        )
-
-        print(f"✅ send_message success", result.model_dump_json(indent=2))
+        # 处理响应成功
+        result = response.data
+        print(f"✅ {fn} success", self.to_json(result))
         return result
 
     def list_messages(
@@ -87,11 +80,13 @@ class MessageManageWrapper(BaseWrapper):
         sort_type: str = "ByCreateTimeAsc",
         page_size: int = 20,
         page_token: Optional[str] = None,
-    ) -> ListMessageResult:
+    ) -> ListMessageResponseBody:
         """
         获取会话历史消息
         https://open.feishu.cn/document/server-docs/im-v1/message/list
         """
+        fn = sys._getframe(0).f_code.co_name
+
         builder = (
             ListMessageRequest.builder()
             .container_id_type(container_id_type)
@@ -109,35 +104,15 @@ class MessageManageWrapper(BaseWrapper):
         request: ListMessageRequest = builder.build()
         response: ListMessageResponse = self._client.im.v1.message.list(request)
 
+        # 处理响应失败
         if not response.success():
-            resp_data = (
-                json.loads(response.raw.content)
-                if response.raw and response.raw.content
-                else {}
-            )
-            raise WrapperError(
-                method="list_messages",
-                code=response.code,
-                msg=response.msg,
-                log_id=response.get_log_id(),
-                resp=resp_data,
-            )
-
+            raise WrapperError(method=fn, response=response)
         if response.data is None:
-            raise WrapperError(method="list_messages", detail="response.data is null")
-        if response.data.items is None:
-            raise WrapperError(
-                method="list_messages", detail="response.data.items is null"
-            )
+            raise WrapperError(method=fn, detail="response.data is null")
 
-        items = [MessageWrapper(m) for m in response.data.items]
-
-        result = ListMessageResult(
-            items=items,
-            has_more=response.data.has_more or False,
-            page_token=response.data.page_token,
-        )
-        print(f"✅ list_messages success", result.model_dump_json(indent=2))
+        # 处理响应成功
+        result = response.data
+        print(f"✅ {fn} success", self.to_json(result))
         return result
 
     def get_message_resource(
@@ -151,6 +126,8 @@ class MessageManageWrapper(BaseWrapper):
         获取消息中的资源文件（图片、音频、视频、文件）
         https://open.feishu.cn/document/server-docs/im-v1/message/get-2
         """
+        fn = sys._getframe(0).f_code.co_name
+
         request: GetMessageResourceRequest = (
             GetMessageResourceRequest.builder()
             .message_id(message_id)
@@ -162,30 +139,15 @@ class MessageManageWrapper(BaseWrapper):
             request
         )
 
+        # 处理响应失败
         if not response.success():
-            resp_data = (
-                json.loads(response.raw.content)
-                if response.raw and response.raw.content
-                else {}
-            )
-            raise WrapperError(
-                method="get_message_resource",
-                code=response.code,
-                msg=response.msg,
-                log_id=response.get_log_id(),
-                resp=resp_data,
-            )
-
+            raise WrapperError(method=fn, response=response)
         if response.file is None:
-            raise WrapperError(
-                method="get_message_resource", detail="response.file is null"
-            )
-
+            raise WrapperError(method=fn, detail="response.file is null")
         if response.file_name is None:
-            raise WrapperError(
-                method="get_message_resource", detail="response.file_name is null"
-            )
+            raise WrapperError(method=fn, detail="response.file_name is null")
 
+        # 处理响应成功
         save_path = output_dir / response.file_name
         save_path.parent.mkdir(parents=True, exist_ok=True)
         save_path.write_bytes(response.file.read())
@@ -194,18 +156,20 @@ class MessageManageWrapper(BaseWrapper):
             file_name=response.file_name,
             file_path=str(save_path),
         )
-        print(f"✅ get_message_resource success", result.model_dump_json(indent=2))
+        print(f"✅ {fn} success", result.model_dump_json(indent=2))
         return result
 
     def get_message_content(
         self,
         message_id: str,
         user_id_type: str = "open_id",
-    ) -> GetMessageContentResult:
+    ) -> GetMessageResponseBody:
         """
         获取指定消息的内容
         https://open.feishu.cn/document/server-docs/im-v1/message/get
         """
+        fn = sys._getframe(0).f_code.co_name
+
         request: GetMessageRequest = (
             GetMessageRequest.builder()
             .message_id(message_id)
@@ -214,32 +178,13 @@ class MessageManageWrapper(BaseWrapper):
         )
         response: GetMessageResponse = self._client.im.v1.message.get(request)
 
+        # 处理响应失败
         if not response.success():
-            resp_data = (
-                json.loads(response.raw.content)
-                if response.raw and response.raw.content
-                else {}
-            )
-            raise WrapperError(
-                method="get_message_content",
-                code=response.code,
-                msg=response.msg,
-                log_id=response.get_log_id(),
-                resp=resp_data,
-            )
-
+            raise WrapperError(method=fn, response=response)
         if response.data is None:
-            raise WrapperError(
-                method="get_message_content", detail="response.data is null"
-            )
+            raise WrapperError(method=fn, detail="response.data is null")
 
-        if response.data.items is None:
-            raise WrapperError(
-                method="get_message_content", detail="response.data.items is null"
-            )
-
-        items = [MessageWrapper(m) for m in response.data.items]
-
-        result = GetMessageContentResult(items=items)
-        print(f"✅ get_message_content success", result.model_dump_json(indent=2))
+        # 处理响应成功
+        result = response.data
+        print(f"✅ {fn} success", self.to_json(result))
         return result

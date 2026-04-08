@@ -108,7 +108,7 @@ def cmd_upload_file(args):
     cloud_space_wrapper = CloudSpaceWrapper()
     # 获取机器人云空间根目录信息
     root_folder_result = cloud_space_wrapper.root_folder()
-    if False:
+    if file_size < MAX_FILE_SIZE:
         # 上传素材方式上传文件
         extra = json.dumps(
             {"obj_type": obj_type, "file_extension": file_extension},

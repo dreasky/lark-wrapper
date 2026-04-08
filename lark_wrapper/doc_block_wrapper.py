@@ -1,3 +1,4 @@
+import sys
 import json
 from pathlib import Path
 from typing import List, Optional
@@ -30,6 +31,8 @@ class DocBlockWrapper(BaseWrapper):
         获取文档所有块（自动分页）并保存到文件
         https://open.feishu.cn/document/ukTMukTMukTM/uUDN04SN0QjL1QDN/document-docx/docx-v1/document-block/list
         """
+        fn = sys._getframe(0).f_code.co_name
+
         all_items: List[BlockWrapper] = []
         page_token = None
         page_count = 0
@@ -56,26 +59,13 @@ class DocBlockWrapper(BaseWrapper):
             )
 
             if not response.success():
-                resp_data = (
-                    json.loads(response.raw.content)
-                    if response.raw and response.raw.content
-                    else {}
-                )
-                raise WrapperError(
-                    method="list_blocks",
-                    code=response.code,
-                    msg=response.msg,
-                    log_id=response.get_log_id(),
-                    resp=resp_data,
-                )
+                raise WrapperError(method=fn, response=response)
 
             if response.data is None:
-                raise WrapperError(method="list_blocks", detail="response.data is null")
+                raise WrapperError(method=fn, detail="response.data is null")
 
             if response.data.items is None:
-                raise WrapperError(
-                    method="list_blocks", detail="response.data.items is null"
-                )
+                raise WrapperError(method=fn, detail="response.data.items is null")
 
             items = [BlockWrapper(b) for b in response.data.items]
 
@@ -107,9 +97,9 @@ class DocBlockWrapper(BaseWrapper):
             output_dir.mkdir(parents=True, exist_ok=True)
             blocks_file = output_dir / "blocks.json"
             blocks_file.write_text(result.model_dump_json(indent=2), encoding="utf-8")
-            print(f"✅ list_blocks saved to: {blocks_file}")
+            print(f"✅ {fn} saved to: {blocks_file}")
 
-        print(f"✅ list_blocks success, total: {len(all_items)} blocks")
+        print(f"✅ {fn} success, total: {len(all_items)} blocks")
         return result
 
     def batch_update_blocks(
@@ -133,6 +123,8 @@ class DocBlockWrapper(BaseWrapper):
             client_token: 操作的唯一标识，用于幂等更新
             user_id_type: 用户 ID 类型
         """
+        fn = sys._getframe(0).f_code.co_name
+
         # 构建请求体
         body_builder = BatchUpdateDocumentBlockRequestBody.builder().requests(requests)
         request_builder = (
@@ -154,28 +146,13 @@ class DocBlockWrapper(BaseWrapper):
         )
 
         if not response.success():
-            resp_data = (
-                json.loads(response.raw.content)
-                if response.raw and response.raw.content
-                else {}
-            )
-            raise WrapperError(
-                method="batch_update_blocks",
-                code=response.code,
-                msg=response.msg,
-                log_id=response.get_log_id(),
-                resp=resp_data,
-            )
+            raise WrapperError(method=fn, response=response)
 
         if response.data is None:
-            raise WrapperError(
-                method="batch_update_blocks", detail="response.data is null"
-            )
+            raise WrapperError(method=fn, detail="response.data is null")
 
         if response.data.blocks is None:
-            raise WrapperError(
-                method="batch_update_blocks", detail="response.data.blocks is null"
-            )
+            raise WrapperError(method=fn, detail="response.data.blocks is null")
 
         items = [BlockWrapper(b) for b in response.data.blocks]
 
@@ -190,11 +167,11 @@ class DocBlockWrapper(BaseWrapper):
         # 保存到文件
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
-            result_file = output_dir / "batch_update_blocks.json"
+            result_file = output_dir / f"{fn}.json"
             result_file.write_text(result.model_dump_json(indent=2), encoding="utf-8")
-            print(f"✅ batch_update_blocks saved to: {result_file}")
+            print(f"✅ {fn} saved to: {result_file}")
 
-        print(f"✅ batch_update_blocks success, revision_id: {result.revision_id}")
+        print(f"✅ {fn} success, revision_id: {result.revision_id}")
         return result
 
     def update_block(
@@ -220,6 +197,8 @@ class DocBlockWrapper(BaseWrapper):
             client_token: 操作的唯一标识，用于幂等更新
             user_id_type: 用户 ID 类型
         """
+        fn = sys._getframe(0).f_code.co_name
+
         request_builder = (
             PatchDocumentBlockRequest.builder()
             .document_id(document_id)
@@ -245,16 +224,10 @@ class DocBlockWrapper(BaseWrapper):
                 if response.raw and response.raw.content
                 else {}
             )
-            raise WrapperError(
-                method="update_block",
-                code=response.code,
-                msg=response.msg,
-                log_id=response.get_log_id(),
-                resp=resp_data,
-            )
+            raise WrapperError(method=fn, response=response)
 
         if response.data is None:
-            raise WrapperError(method="update_block", detail="response.data is null")
+            raise WrapperError(method=fn, detail="response.data is null")
 
         block = BlockWrapper(response.data.block) if response.data.block else None
 
@@ -269,9 +242,9 @@ class DocBlockWrapper(BaseWrapper):
         # 保存到文件
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
-            result_file = output_dir / "update_block.json"
+            result_file = output_dir / f"{fn}.json"
             result_file.write_text(result.model_dump_json(indent=2), encoding="utf-8")
-            print(f"✅ update_block saved to: {result_file}")
+            print(f"✅ {fn} saved to: {result_file}")
 
-        print(f"✅ update_block success, block_id: {block_id}")
+        print(f"✅ {fn} success, block_id: {block_id}")
         return result

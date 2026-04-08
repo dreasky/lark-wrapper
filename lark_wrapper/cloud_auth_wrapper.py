@@ -1,4 +1,4 @@
-import json
+import sys
 from typing import List
 from lark_oapi.api.drive.v1 import (
     BaseMember,
@@ -7,11 +7,6 @@ from lark_oapi.api.drive.v1 import (
     BatchCreatePermissionMemberRequest,
     BatchCreatePermissionMemberRequestBody,
     BatchCreatePermissionMemberResponse,
-)
-from .wrapper_entity import (
-    PermissionMemberResult,
-    BatchPermissionMemberResult,
-    BaseMemberWrapper,
 )
 from .base_wrapper import BaseWrapper
 from .wrapper_error import WrapperError
@@ -30,7 +25,7 @@ class CloudAuthWrapper(BaseWrapper):
         file_token: str,
         file_type: str,
         need_notification: bool = False,
-    ) -> PermissionMemberResult:
+    ) -> BaseMember:
         """增加协作者权限
         https://open.feishu.cn/document/server-docs/docs/permission/permission-member/create
 
@@ -45,6 +40,10 @@ class CloudAuthWrapper(BaseWrapper):
             file_token (str): 云文档的 token, 需要与 type 参数指定的云文档类型相匹配
             need_notification (bool): 添加权限后是否通知对方, 默认 false 不通知
         """
+        # 动态获取当前函数名
+        fn = sys._getframe(0).f_code.co_name
+
+        # 构造请求
         member = (
             BaseMember.builder()
             .member_type(member_type)
@@ -54,7 +53,6 @@ class CloudAuthWrapper(BaseWrapper):
             .type(type)
             .build()
         )
-
         request: CreatePermissionMemberRequest = (
             CreatePermissionMemberRequest.builder()
             .type(file_type)
@@ -71,35 +69,17 @@ class CloudAuthWrapper(BaseWrapper):
 
         # 处理失败返回
         if not response.success():
-            resp_data = (
-                json.loads(response.raw.content)
-                if response.raw and response.raw.content
-                else {}
-            )
-            raise WrapperError(
-                method="create_permission_member",
-                code=response.code,
-                msg=response.msg,
-                log_id=response.get_log_id(),
-                resp=resp_data,
-            )
+            raise WrapperError(method=fn, response=response)
 
         if response.data is None:
-            raise WrapperError(
-                method="create_permission_member", detail="response.data is null"
-            )
+            raise WrapperError(method=fn, detail="response.data is null")
 
         if response.data.member is None:
-            raise WrapperError(
-                method="create_permission_member",
-                detail="response.data.member is null",
-            )
+            raise WrapperError(method=fn, detail="response.data.member is null")
 
-        item = BaseMemberWrapper(response.data.member)
-
-        # 处理业务结果
-        result = PermissionMemberResult(item=item)
-        print(f"✅ create_permission_member success", result.model_dump_json(indent=2))
+        # 处理成功返回
+        result = response.data.member
+        print(f"✅ create_permission_member success", self.to_json(result))
         return result
 
     def batch_create_permission_member(
@@ -112,7 +92,7 @@ class CloudAuthWrapper(BaseWrapper):
         file_token: str,
         file_type: str,
         need_notification: bool = False,
-    ) -> BatchPermissionMemberResult:
+    ) -> List[BaseMember]:
         """批量增加协作者权限
         https://open.feishu.cn/document/docs/permission/permission-member/batch_create
 
@@ -127,6 +107,8 @@ class CloudAuthWrapper(BaseWrapper):
             file_token (str): 云文档的 token, 需要与 type 参数指定的云文档类型相匹配
             need_notification (bool): 添加权限后是否通知对方, 默认 false 不通知
         """
+        fn = sys._getframe(0).f_code.co_name
+
         member_list = [
             BaseMember.builder()
             .member_type(member_type)
@@ -137,7 +119,6 @@ class CloudAuthWrapper(BaseWrapper):
             .build()
             for i in member_id_list
         ]
-
         request: BatchCreatePermissionMemberRequest = (
             BatchCreatePermissionMemberRequest.builder()
             .type(file_type)
@@ -157,38 +138,15 @@ class CloudAuthWrapper(BaseWrapper):
 
         # 处理失败返回
         if not response.success():
-            resp_data = (
-                json.loads(response.raw.content)
-                if response.raw and response.raw.content
-                else {}
-            )
-            raise WrapperError(
-                method="batch_create_permission_member",
-                code=response.code,
-                msg=response.msg,
-                log_id=response.get_log_id(),
-                resp=resp_data,
-            )
+            raise WrapperError(method=fn, response=response)
 
         if response.data is None:
-            raise WrapperError(
-                method="batch_create_permission_member", detail="response.data is null"
-            )
+            raise WrapperError(method=fn, detail="response.data is null")
 
         if response.data.members is None:
-            raise WrapperError(
-                method="batch_create_permission_member",
-                detail="response.data.members is null",
-            )
+            raise WrapperError(method=fn, detail="response.data.members is null")
 
-        items = [BaseMemberWrapper(m) for m in response.data.members]
+        result = response.data.members
 
-        # 处理业务结果
-        result = BatchPermissionMemberResult(
-            member_count=len(member_id_list), items=items
-        )
-        print(
-            f"✅ batch_create_permission_member success",
-            result.model_dump_json(indent=2),
-        )
+        print(f"✅ {fn} success", self.to_json(result))
         return result
