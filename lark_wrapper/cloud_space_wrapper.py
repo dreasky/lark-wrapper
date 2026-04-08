@@ -103,8 +103,8 @@ class CloudSpaceWrapper(BaseWrapper):
 
         request_body = (
             CreateFolderFileRequestBody.builder()
-            .name("产品优化项目")
-            .folder_token("fldbcO1UuPz8VwnpPx5a92abcef")
+            .name(name)
+            .folder_token(folder_token)
             .build()
         )
         request = CreateFolderFileRequest.builder().request_body(request_body).build()
