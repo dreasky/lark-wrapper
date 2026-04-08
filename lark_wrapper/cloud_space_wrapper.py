@@ -31,6 +31,9 @@ from lark_oapi.api.drive.v1 import (
     UploadFinishFileRequest,
     UploadFinishFileRequestBody,
     UploadFinishFileResponseBody,
+    CreateFolderFileRequestBody,
+    CreateFolderFileRequest,
+    CreateFolderFileResponseBody,
 )
 from lark_oapi.api.docx.v1 import (
     Document,
@@ -86,6 +89,38 @@ class CloudSpaceWrapper(BaseWrapper):
             user_id=data.get("user_id"),
         )
         print(f"✅ {fn} success", result.model_dump_json(indent=2))
+        return result
+
+    def create_folder(
+        self, name: str, folder_token: str
+    ) -> CreateFolderFileResponseBody:
+        """
+        新建文件夹
+        https://open.feishu.cn/document/server-docs/docs/drive-v1/folder/create_folder
+        """
+        # 动态获取当前函数名
+        fn = sys._getframe(0).f_code.co_name
+
+        request_body = (
+            CreateFolderFileRequestBody.builder()
+            .name("产品优化项目")
+            .folder_token("fldbcO1UuPz8VwnpPx5a92abcef")
+            .build()
+        )
+        request = CreateFolderFileRequest.builder().request_body(request_body).build()
+
+        # 发起请求
+        response = self._client.drive.v1.file.create_folder(request)
+
+        # 处理响应失败
+        if not response.success():
+            raise WrapperError(method=fn, response=response)
+        if response.data is None:
+            raise WrapperError(method=fn, detail="response.data is null")
+
+        # 处理响应成功
+        result = response.data
+        print(f"✅ {fn} success", self.to_json(result))
         return result
 
     def list_file(self, folder_token: str = "") -> ListFileResponseBody:
