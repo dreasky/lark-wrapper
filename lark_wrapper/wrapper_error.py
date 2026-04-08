@@ -34,8 +34,6 @@ class WrapperError(Exception):
             except (json.JSONDecodeError, AttributeError):
                 self.resp = {}
 
-        self.detail = detail
-
         parts = [f"❌ {method} failed"]
         if self.code is not None:
             parts.append(f"code={self.code}")
@@ -45,5 +43,9 @@ class WrapperError(Exception):
             parts.append(f"log_id={self.log_id}")
         if self.detail:
             parts.append(self.detail)
+        if self.detail:
+            parts.append(self.detail)
+        if self.resp:
+            parts.append(str(self.resp))
 
         super().__init__(", ".join(parts))
