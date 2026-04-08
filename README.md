@@ -10,7 +10,7 @@ git submodule add https://github.com/dreasky/lark-wrapper.git libs/lark-wrapper
 pip install -e libs/lark-wrapper
 
 # 直接从 GitHub 安装
-pip install git+https://github.com/dreasky/lark-wrapper.git
+pip install --upgrade git+https://github.com/dreasky/lark-wrapper.git
 ```
 
 ## 配置
