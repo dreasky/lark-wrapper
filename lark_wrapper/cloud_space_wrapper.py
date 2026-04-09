@@ -297,6 +297,8 @@ class CloudSpaceWrapper(BaseWrapper):
             raise WrapperError(method=fn, detail="response.data is null")
         if response.data.result is None:
             raise WrapperError(method=fn, detail="response.data.result is null")
+        if response.data.result.url is None:
+            raise WrapperError(method=fn, detail="response.data.result.url is null")
 
         # 处理响应成功
         result = response.data.result
