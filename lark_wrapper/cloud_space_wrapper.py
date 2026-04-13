@@ -187,6 +187,51 @@ class CloudSpaceWrapper(BaseWrapper):
 
     #  === 导入文件 star ===
 
+    def upload_media(
+        self,
+        file_path: Path,
+        parent_type: str,
+        parent_node: str,
+        extra: str,
+    ) -> UploadAllMediaResponseBody:
+        """
+        上传素材 (20M以内)
+        https://open.feishu.cn/document/server-docs/docs/drive-v1/media/upload_all
+        extra:
+        txt、docx、md -> docx
+        xlsx -> sheet
+        """
+        fn = sys._getframe(0).f_code.co_name
+
+        file_name = str(file_path.name)
+        file_size = file_path.stat().st_size
+        with file_path.open("rb") as file:
+            request_body_builder = (
+                UploadAllMediaRequestBody.builder()
+                .file_name(file_name)
+                .parent_type(parent_type)
+                .parent_node(parent_node)
+                .size(file_size)
+                .extra(extra)
+                .file(file)
+            )
+            request_body = request_body_builder.build()
+            request = UploadAllMediaRequest.builder().request_body(request_body).build()
+            response = self._client.drive.v1.media.upload_all(request)
+
+        # 处理响应失败
+        if not response.success():
+            raise WrapperError(method=fn, response=response)
+        if response.data is None:
+            raise WrapperError(method=fn, detail="response.data is null")
+        if response.data.file_token is None:
+            raise WrapperError(method=fn, detail="response.data.file_token is null")
+
+        # 处理响应成功
+        result = response.data
+        print(f"✅ {fn} success", self.to_json(result))
+        return result
+
     # 导入文件概述: https://open.feishu.cn/document/server-docs/docs/drive-v1/import_task/import-user-guide
     def upload_all_media(
         self,
