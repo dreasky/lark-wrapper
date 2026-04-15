@@ -1,6 +1,8 @@
 import sys
 import requests
 from pathlib import Path
+from typing import IO, Optional
+
 from lark_oapi.api.drive.v1 import (
     ListFileRequest,
     ListFileResponseBody,
@@ -17,8 +19,6 @@ from lark_oapi.api.drive.v1 import (
     CreateImportTaskRequest,
     CreateImportTaskResponseBody,
     GetImportTaskRequest,
-    ListFileCommentRequest,
-    ListFileCommentResponse,
     CreateImportTaskResponse,
     GetImportTaskResponse,
     UploadPartMediaRequest,
@@ -34,17 +34,13 @@ from lark_oapi.api.drive.v1 import (
     CreateFolderFileRequestBody,
     CreateFolderFileRequest,
     CreateFolderFileResponseBody,
+    ImportTaskMountPoint,
+    ImportTask,
 )
-from lark_oapi.api.docx.v1 import (
-    Document,
-    CreateDocumentRequest,
-    CreateDocumentRequestBody,
-)
-import lark_oapi as lark
-from .wrapper_entity import *
+
+from .wrapper_entity import RootFolderResult
 from .base_wrapper import BaseWrapper
 from .wrapper_error import WrapperError
-from typing import List, IO
 
 
 def _get_status_text(job_status: int | None) -> str:
@@ -58,7 +54,7 @@ def _get_status_text(job_status: int | None) -> str:
 
 
 class CloudSpaceWrapper(BaseWrapper):
-    """飞书云文档 API 封装类"""
+    """飞书云文档-云空间 API 封装类"""
 
     def root_folder(self) -> RootFolderResult:
         """
@@ -150,40 +146,6 @@ class CloudSpaceWrapper(BaseWrapper):
         # 处理响应成功
         print(f"✅ {fn} success", self.to_json(response.data))
         return response.data
-
-    def create_document(self, folder_token: str, title: str) -> Document:
-        """
-        创建文档
-        https://open.feishu.cn/document/server-docs/docs/docs/docx-v1/document/create
-        """
-        fn = sys._getframe(0).f_code.co_name
-
-        # 构造请求对象
-        request_body = (
-            CreateDocumentRequestBody.builder()
-            .folder_token(folder_token)
-            .title(title)
-            .build()
-        )
-        request: CreateDocumentRequest = (
-            CreateDocumentRequest.builder().request_body(request_body).build()
-        )
-
-        # 发起请求
-        response = self._client.docx.v1.document.create(request)
-
-        # 处理响应失败
-        if not response.success():
-            raise WrapperError(method=fn, response=response)
-        if response.data is None:
-            raise WrapperError(method=fn, detail="response.data is null")
-        if response.data.document is None:
-            raise WrapperError(method=fn, detail="response.data.document is null")
-
-        # 处理响应成功
-        result = response.data.document
-        print(f"✅ {fn} success", self.to_json(result))
-        return result
 
     #  === 导入文件 star ===
 
@@ -563,89 +525,4 @@ class CloudSpaceWrapper(BaseWrapper):
         # 处理响应成功
         result = response.data
         print(f"✅ {fn} success", self.to_json(result))
-        return result
-
-    def list_comments(
-        self,
-        file_token: str,
-        file_type: str,
-        output_dir: Optional[Path] = None,
-        is_whole: Optional[bool] = None,
-        is_solved: Optional[bool] = None,
-        user_id_type: Optional[str] = None,
-    ) -> ListCommentsResult:
-        """
-        获取云文档所有评论并保存到文件
-        https://open.feishu.cn/document/server-docs/docs/CommentAPI/list
-        """
-        fn = sys._getframe(0).f_code.co_name
-
-        all_items: List[FileCommentWrapper] = []
-        page_token = None
-        page_count = 0
-
-        while True:
-            page_count += 1
-
-            builder = (
-                ListFileCommentRequest.builder()
-                .file_token(file_token)
-                .file_type(file_type)
-                .page_size(50)
-            )
-
-            if is_whole is not None:
-                builder = builder.is_whole(is_whole)
-            if is_solved is not None:
-                builder = builder.is_solved(is_solved)
-            if page_token:
-                builder = builder.page_token(page_token)
-            if user_id_type:
-                builder = builder.user_id_type(user_id_type)
-
-            request: ListFileCommentRequest = builder.build()
-            response: ListFileCommentResponse = self._client.drive.v1.file_comment.list(
-                request
-            )
-
-            # 处理响应失败
-            if not response.success():
-                raise WrapperError(method=fn, response=response)
-            if response.data is None:
-                raise WrapperError(method=fn, detail="response.data is null")
-            if response.data.items is None:
-                raise WrapperError(method=fn, detail="response.data.items is null")
-
-            comments = response.data.items or []
-            page_items = [
-                (c if isinstance(c, FileCommentWrapper) else FileCommentWrapper(c))
-                for c in comments
-            ]
-            all_items.extend(page_items)
-
-            print(
-                f"📄 Page {page_count}: {len(comments)} comments, total: {len(all_items)}"
-            )
-
-            # 通过 has_more 和 page_token 判断是否有更多分页
-            if not response.data.has_more:
-                break
-            page_token = response.data.page_token
-            if not page_token:
-                break
-
-        # 处理响应成功
-        result = ListCommentsResult(
-            file_token=file_token,
-            total_comments=len(all_items),
-            items=all_items,
-        )
-        # 保存到文件
-        if output_dir:
-            output_dir.mkdir(parents=True, exist_ok=True)
-            comment_file = output_dir / "comments.json"
-            comment_file.write_text(result.model_dump_json(indent=2), encoding="utf-8")
-            print(f"✅ {fn} saved to: {comment_file}")
-
-        print(f"✅ {fn} success, total: {len(all_items)} comments")
         return result

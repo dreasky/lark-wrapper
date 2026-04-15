@@ -1,5 +1,6 @@
 import sys
 from typing import List
+
 from lark_oapi.api.drive.v1 import (
     BaseMember,
     CreatePermissionMemberRequest,
@@ -8,6 +9,7 @@ from lark_oapi.api.drive.v1 import (
     BatchCreatePermissionMemberRequestBody,
     BatchCreatePermissionMemberResponse,
 )
+
 from .base_wrapper import BaseWrapper
 from .wrapper_error import WrapperError
 

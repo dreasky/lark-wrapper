@@ -199,7 +199,7 @@ def cmd_list_comments(args):
 
 def cmd_list_blocks(args):
     """获取文档所有块（自动分页）"""
-    wrapper = DocBlockWrapper()
+    wrapper = CloudDocBlockWrapper()
     wrapper.list_blocks(
         document_id=args.document_id,
         output_dir=args.output_dir,

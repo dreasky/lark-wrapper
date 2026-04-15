@@ -1,23 +1,27 @@
 import sys
-import json
 from pathlib import Path
 from typing import List, Optional
-from lark_oapi.api.docx.v1 import *
-from .wrapper_entity import (
-    ListBlocksResult,
-    BlockWrapper,
-    BatchUpdateBlocksResult,
-    UpdateBlockResult,
+
+from lark_oapi.api.docx.v1 import (
+    Block,
+    ListDocumentBlockRequest,
+    ListDocumentBlockResponse,
+    UpdateBlockRequest,
+    PatchDocumentBlockResponseBody,
+    BatchUpdateDocumentBlockResponseBody,
+    BatchUpdateDocumentBlockRequestBody,
+    BatchUpdateDocumentBlockRequest,
+    BatchUpdateDocumentBlockResponse,
+    PatchDocumentBlockRequest,
+    PatchDocumentBlockResponse,
 )
+
 from .base_wrapper import BaseWrapper
 from .wrapper_error import WrapperError
 
-# 块过滤列表：文本 Block、标题 1-9 Block、图片 Block
-BLOCK_FILTER_LIST = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 27]
 
-
-class DocBlockWrapper(BaseWrapper):
-    """飞书云文档 > 文档 > 块 API 封装类"""
+class CloudDocBlockWrapper(BaseWrapper):
+    """飞书云文档 - 文档 - 块 API 封装类"""
 
     def list_blocks(
         self,
@@ -25,15 +29,14 @@ class DocBlockWrapper(BaseWrapper):
         output_dir: Optional[Path] = None,
         document_revision_id: Optional[int] = None,
         user_id_type: Optional[str] = None,
-        is_filter: bool = False,
-    ) -> ListBlocksResult:
+    ) -> List[Block]:
         """
         获取文档所有块（自动分页）并保存到文件
         https://open.feishu.cn/document/ukTMukTMukTM/uUDN04SN0QjL1QDN/document-docx/docx-v1/document-block/list
         """
         fn = sys._getframe(0).f_code.co_name
 
-        all_items: List[BlockWrapper] = []
+        result: List[Block] = []
         page_token = None
         page_count = 0
 
@@ -67,16 +70,10 @@ class DocBlockWrapper(BaseWrapper):
             if response.data.items is None:
                 raise WrapperError(method=fn, detail="response.data.items is null")
 
-            items = [BlockWrapper(b) for b in response.data.items]
-
-            # 解析块列表
-            if is_filter:
-                items = [b for b in items if b.block_type in BLOCK_FILTER_LIST]
-
-            all_items.extend(items)
-
+            items = response.data.items
+            result.extend(items)
             print(
-                f"📄 Page {page_count}: {len(items or [])} blocks, total: {len(all_items)}"
+                f"📄 Page {page_count}: {len(items or [])} blocks, total: {len(result)}"
             )
 
             # 通过 has_more 和 page_token 判断是否有更多分页
@@ -86,20 +83,14 @@ class DocBlockWrapper(BaseWrapper):
             if not page_token:
                 break
 
-        result = ListBlocksResult(
-            document_id=document_id,
-            total_blocks=len(all_items),
-            items=all_items,
-        )
-
         # 保存到文件
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
             blocks_file = output_dir / "blocks.json"
-            blocks_file.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+            blocks_file.write_text(self.to_json(result), encoding="utf-8")
             print(f"✅ {fn} saved to: {blocks_file}")
 
-        print(f"✅ {fn} success, total: {len(all_items)} blocks")
+        print(f"✅ {fn} success, total: {len(result)} blocks")
         return result
 
     def batch_update_blocks(
@@ -110,7 +101,7 @@ class DocBlockWrapper(BaseWrapper):
         document_revision_id: Optional[int] = None,
         client_token: Optional[str] = None,
         user_id_type: Optional[str] = None,
-    ) -> BatchUpdateBlocksResult:
+    ) -> BatchUpdateDocumentBlockResponseBody:
         """
         批量更新块的富文本内容
         https://open.feishu.cn/document/server-docs/docs/docs/docx-v1/document-block/batch_update
@@ -154,24 +145,16 @@ class DocBlockWrapper(BaseWrapper):
         if response.data.blocks is None:
             raise WrapperError(method=fn, detail="response.data.blocks is null")
 
-        items = [BlockWrapper(b) for b in response.data.blocks]
-
-        result = BatchUpdateBlocksResult(
-            document_id=document_id,
-            client_token=response.data.client_token,
-            revision_id=response.data.document_revision_id,
-            block_count=len(items),
-            items=items,
-        )
+        result = response.data
 
         # 保存到文件
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
-            result_file = output_dir / f"{fn}.json"
-            result_file.write_text(result.model_dump_json(indent=2), encoding="utf-8")
-            print(f"✅ {fn} saved to: {result_file}")
+            output_file = output_dir / f"{fn}.json"
+            output_file.write_text(self.to_json(result), encoding="utf-8")
+            print(f"✅ {fn} saved to: {output_file}")
 
-        print(f"✅ {fn} success, revision_id: {result.revision_id}")
+        print(f"✅ {fn} success, document_revision_id: {result.document_revision_id}")
         return result
 
     def update_block(
@@ -183,7 +166,7 @@ class DocBlockWrapper(BaseWrapper):
         document_revision_id: Optional[int] = None,
         client_token: Optional[str] = None,
         user_id_type: Optional[str] = None,
-    ) -> UpdateBlockResult:
+    ) -> PatchDocumentBlockResponseBody:
         """
         更新指定块的内容
         https://open.feishu.cn/document/server-docs/docs/docs/docx-v1/document-block/patch
@@ -219,32 +202,22 @@ class DocBlockWrapper(BaseWrapper):
         )
 
         if not response.success():
-            resp_data = (
-                json.loads(response.raw.content)
-                if response.raw and response.raw.content
-                else {}
-            )
             raise WrapperError(method=fn, response=response)
 
         if response.data is None:
             raise WrapperError(method=fn, detail="response.data is null")
 
-        block = BlockWrapper(response.data.block) if response.data.block else None
+        if response.data.block is None:
+            raise WrapperError(method=fn, detail="response.data.block is null")
 
-        result = UpdateBlockResult(
-            document_id=document_id,
-            block_id=block_id,
-            client_token=response.data.client_token,
-            revision_id=response.data.document_revision_id,
-            block=block,
-        )
+        result = response.data
 
         # 保存到文件
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
-            result_file = output_dir / f"{fn}.json"
-            result_file.write_text(result.model_dump_json(indent=2), encoding="utf-8")
-            print(f"✅ {fn} saved to: {result_file}")
+            output_file = output_dir / f"{fn}.json"
+            output_file.write_text(self.to_json(result), encoding="utf-8")
+            print(f"✅ {fn} saved to: {output_file}")
 
         print(f"✅ {fn} success, block_id: {block_id}")
         return result

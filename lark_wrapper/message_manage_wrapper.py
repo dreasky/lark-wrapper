@@ -1,6 +1,8 @@
 import sys
 import json
 from pathlib import Path
+from typing import Optional
+
 from lark_oapi.api.im.v1 import (
     CreateMessageRequestBody,
     CreateMessageResponseBody,
@@ -15,7 +17,7 @@ from lark_oapi.api.im.v1 import (
     GetMessageResponse,
     GetMessageResponseBody,
 )
-from .wrapper_entity import *
+
 from .base_wrapper import BaseWrapper
 from .wrapper_error import WrapperError
 
@@ -121,12 +123,13 @@ class MessageManageWrapper(BaseWrapper):
         file_key: str,
         type: str,
         output_dir: Path,
-    ) -> GetMessageResourceResult:
+    ) -> Path:
         """
         获取消息中的资源文件（图片、音频、视频、文件）
         https://open.feishu.cn/document/server-docs/im-v1/message/get-2
         """
         fn = sys._getframe(0).f_code.co_name
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         request: GetMessageResourceRequest = (
             GetMessageResourceRequest.builder()
@@ -148,16 +151,10 @@ class MessageManageWrapper(BaseWrapper):
             raise WrapperError(method=fn, detail="response.file_name is null")
 
         # 处理响应成功
-        save_path = output_dir / response.file_name
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        save_path.write_bytes(response.file.read())
-
-        result = GetMessageResourceResult(
-            file_name=response.file_name,
-            file_path=str(save_path),
-        )
-        print(f"✅ {fn} success", result.model_dump_json(indent=2))
-        return result
+        output_file = output_dir / response.file_name
+        output_file.write_bytes(response.file.read())
+        print(f"✅ {fn} success")
+        return output_file
 
     def get_message_content(
         self,

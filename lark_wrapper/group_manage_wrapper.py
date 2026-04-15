@@ -1,10 +1,12 @@
 import sys
 from typing import List
+
 from lark_oapi.api.im.v1 import (
     ListChat,
     ListChatRequest,
     ListChatResponse,
 )
+
 from .base_wrapper import BaseWrapper
 from .wrapper_error import WrapperError
 
