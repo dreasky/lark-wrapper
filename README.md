@@ -5,9 +5,9 @@
 ## 安装
 
 ```bash
-# 作为 git submodule 安装（推荐）
-git submodule add https://github.com/dreasky/lark-wrapper.git libs/lark-wrapper
-pip install -e libs/lark-wrapper
+# 作为 git
+git clone https://github.com/dreasky/lark-wrapper.git
+pip install -e lark-wrapper
 
 # 直接从 GitHub 安装
 pip install --upgrade git+https://github.com/dreasky/lark-wrapper.git
@@ -40,14 +40,14 @@ msg.send_message(receive_id_type="open_id", receive_id="ou_xxx", msg_type="text"
 
 ## 包含的 Wrapper
 
-| 类 | 功能 |
-|---|---|
-| `CloudSpaceWrapper` | 云空间文件管理、文档创建、文件上传/导入 |
-| `CloudAuthWrapper` | 文档权限管理 |
-| `DocBlockWrapper` | 文档块读写 |
-| `GroupManageWrapper` | 群组管理 |
-| `MessageManageWrapper` | 消息收发 |
-| `RobotWrapper` | 机器人信息 |
+| 类                     | 功能                                    |
+| ---------------------- | --------------------------------------- |
+| `CloudSpaceWrapper`    | 云空间文件管理、文档创建、文件上传/导入 |
+| `CloudAuthWrapper`     | 文档权限管理                            |
+| `DocBlockWrapper`      | 文档块读写                              |
+| `GroupManageWrapper`   | 群组管理                                |
+| `MessageManageWrapper` | 消息收发                                |
+| `RobotWrapper`         | 机器人信息                              |
 
 ## 更新 submodule
 
